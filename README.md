@@ -3,6 +3,8 @@
 Una aplicación interactiva para explorar y experimentar con widgets de Flet en tiempo real.
 
 <p align="center"> <img src="https://github.com/MagnoEfren/FletPlaygraund/blob/main/assets/icon.png" alt="Flet Widgets Playground" width="120" /> </p>
+
+
 ## 📁 Estructura del Proyecto
 
 ```
@@ -21,11 +23,7 @@ flet-widgets-playground/
 │   ├── __init__.py
 │   ├── container_widget.py     # Widget Container
 │   ├── text_widget.py          # Widget Text
-│   ├── button_widget.py        # Widget ElevatedButton
-│   ├── textfield_widget.py     # Widget TextField
-│   ├── row_widget.py           # Widget Row
-│   ├── column_widget.py        # Widget Column
-│   └── card_widget.py          # Widget Card
+│   ├── button_widget.py        # Widget ElevatedButton,  etc.
 │
 └── ui/                          # Módulo UI: Componentes de interfaz
     ├── __init__.py
