@@ -52,16 +52,36 @@ class LeftPanel:
         return ft.Container(
             content=ft.Column([
                 # Header
-                ft.Container(
-                    content=ft.Text(
-                        "🎨 Widgets",
-                        size=20,
-                        weight=ft.FontWeight.BOLD,
-                        color="#2d3748",
-                    ),
-                    padding=ft.padding.only(bottom=10),
+                ft.Row(
+                    controls=[
+                        
+                        ft.Image(
+                                width=48,
+                                height=48, 
+                                src="assets/icon.png",  
+                                fit=ft.ImageFit.COVER,
+                            ),
+                         
+                        ft.ShaderMask(
+                            blend_mode=ft.BlendMode.SRC_IN,
+                            shader=ft.LinearGradient(
+                                colors=["#7edf26", "#0148e2", "#00fbe8"],
+                                begin=ft.alignment.top_left,
+                                end=ft.alignment.bottom_right,
+                            ),
+                            content=ft.Text(
+                                "Flet Widgets\nPlayground",
+                                size=15,
+                                weight=ft.FontWeight.BOLD,
+                                text_align=ft.TextAlign.LEFT,
+                            ),
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.START,
+                    spacing=5,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                
+                            
                 # Buscador
                 ft.TextField(
                     ref=self.search_field,
@@ -88,8 +108,9 @@ class LeftPanel:
                     expand=True,
                 ),
             ], spacing=10),
-            width=280,
+            #expand=1,
             padding=20,
+            border_radius=12,
             bgcolor="#ffffff",
-            border=ft.border.only(right=ft.BorderSide(1, "#e2e8f0")),
+            border=ft.border.all(1, "#e2e8f0"),
         )
