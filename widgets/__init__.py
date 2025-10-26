@@ -1,7 +1,4 @@
-# core/__init__.py
-"""
-Módulo core: Contiene las clases base y gestores centrales
-"""
+
 
 
 # widgets/__init__.py
