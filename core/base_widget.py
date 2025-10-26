@@ -58,7 +58,8 @@ class WidgetConfig(ABC):
         callback()
     
     def _create_slider(self, label: str, param_key: str, min_val: float, 
-                       max_val: float, on_change_callback) -> ft.Column:
+                   max_val: float, on_change_callback) -> ft.Column:
+        
         """
         Crea un slider con etiqueta para ajustar un parámetro
         
@@ -72,19 +73,25 @@ class WidgetConfig(ABC):
         Returns:
             ft.Column con el slider y su etiqueta
         """
+        value_text = ft.Text(
+            f"{label}: {self.params[param_key]:.0f}px", 
+            size=13, 
+            weight=ft.FontWeight.W_500, 
+            color="#2d3748"
+        )
+
+        def on_slider_change(e):
+            new_value = e.control.value
+            self._update_param(param_key, new_value, on_change_callback)
+            value_text.value = f"{label}: {new_value:.0f}px"
+            value_text.update()   
+
         return ft.Column([
-            ft.Text(
-                f"{label}: {self.params[param_key]:.0f}px", 
-                size=13, 
-                weight=ft.FontWeight.W_500, 
-                color="#2d3748"
-            ),
+            value_text,
             ft.Slider(
                 min=min_val,
                 max=max_val,
                 value=self.params[param_key],
-                on_change=lambda e: self._update_param(
-                    param_key, e.control.value, on_change_callback
-                )
+                on_change=on_slider_change
             ),
         ], spacing=5)
