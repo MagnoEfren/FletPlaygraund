@@ -9,7 +9,7 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 0
     page.bgcolor = "#f7fafc"
-    
+    page.scroll = ft.ScrollMode.AUTO
     # Inicializar el gestor de widgets
     widget_manager = WidgetManager()
     
@@ -21,3 +21,4 @@ def main(page: ft.Page):
 if __name__ == "__main__":
 
     ft.app(target=main, view=ft.AppView.WEB_BROWSER)
+
