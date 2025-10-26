@@ -58,7 +58,7 @@ class LeftPanel:
                         ft.Image(
                                 width=48,
                                 height=48, 
-                                src="assets/icon.png",  
+                                src="https://raw.githubusercontent.com/MagnoEfren/FletPlaygraund/refs/heads/main/assets/icon.png",  
                                 fit=ft.ImageFit.COVER,
                             ),
                          
