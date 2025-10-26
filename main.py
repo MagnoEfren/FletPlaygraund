@@ -1,6 +1,6 @@
 import flet as ft
-from ui.layout import MainLayout
-from core.widget_manager import WidgetManager
+from ui  import MainLayout
+from core  import WidgetManager
 
 
 def main(page: ft.Page):
@@ -19,4 +19,5 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
+
     ft.app(target=main, view=ft.AppView.WEB_BROWSER)
