@@ -4,7 +4,6 @@ Una aplicación interactiva para explorar y experimentar con widgets de Flet en 
 
 <p align="center"> <img src="https://github.com/MagnoEfren/FletPlaygraund/blob/main/assets/icon.png" alt="Flet Widgets Playground" width="120" /> </p>
 
-
 ## 📁 Estructura del Proyecto
 
 ```
