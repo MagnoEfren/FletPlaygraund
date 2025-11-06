@@ -1,5 +1,7 @@
 # Flet Widgets Playground
 
+
+
 Una aplicación interactiva para explorar y experimentar con widgets de Flet en tiempo real.
 
 <p align="center"> <img src="https://github.com/MagnoEfren/FletPlaygraund/blob/main/assets/icon.png" alt="Flet Widgets Playground" width="120" /> </p>
