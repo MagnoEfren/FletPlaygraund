@@ -1,5 +1,3 @@
-
-
 # Flet Widgets Playground
 
 Una aplicación interactiva para explorar y experimentar con widgets de Flet en tiempo real.
