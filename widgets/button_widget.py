@@ -1,81 +1,73 @@
 import flet as ft
-from core.base_widget import WidgetConfig
+
+from core.base_widget import ICON_OPTIONS, Param, WidgetConfig
+from services.code_service import call, py
+
+VARIANTS = [
+    ("Button", "Button (antes ElevatedButton)"),
+    ("FilledButton", "FilledButton"),
+    ("FilledTonalButton", "FilledTonalButton"),
+    ("OutlinedButton", "OutlinedButton"),
+    ("TextButton", "TextButton"),
+]
 
 
-class ElevatedButtonConfig(WidgetConfig):
-    """Configuración para el widget ElevatedButton"""
-    
+class ButtonConfig(WidgetConfig):
+    PARAMS = [
+        Param("variant", "Variante", "select", "Button", options=VARIANTS, group="Tipo"),
+        Param("text", "Texto", "text", "Click me!", group="Contenido"),
+        Param("show_icon", "Mostrar icono", "switch", True, group="Contenido"),
+        Param("icon", "Icono", "icon", "SEND", options=ICON_OPTIONS, group="Contenido"),
+        Param("bgcolor", "Fondo", "color", None, allow_none=True, group="Estilo"),
+        Param("color", "Color del texto", "color", None, allow_none=True, group="Estilo"),
+        Param("radius", "Radio de borde", "slider", 20.0, 0, 30, unit="px", group="Estilo"),
+        Param("elevation", "Elevación", "slider", 2.0, 0, 16, group="Estilo"),
+        Param("pad_h", "Padding horizontal", "slider", 24.0, 8, 60, unit="px", group="Estilo"),
+        Param("pad_v", "Padding vertical", "slider", 16.0, 4, 40, unit="px", group="Estilo"),
+        Param("disabled", "Deshabilitado", "switch", False, group="Estado"),
+    ]
+
     def __init__(self):
         super().__init__(
-            name="ElevatedButton",
-            icon=ft.Icons.SMART_BUTTON,
-            description="Los botones elevados permiten interacciones del usuario. Tienen una elevación "
-                       "que crea una sombra, lo que los hace destacar. Ideales para acciones principales."
+            name="Button", icon=ft.Icons.SMART_BUTTON, category="Botones",
+            description="Botones Material 3. En Flet 1.0 ElevatedButton se eliminó: usa ft.Button "
+                        "(o Filled, FilledTonal, Outlined, Text) y siempre content= en vez de text=.",
         )
-        self.params = {
-            'width': 200.0,
-            'height': 50.0,
-            'bgcolor': '#48bb78',
-            'color': '#ffffff',
-            'elevation': 4.0,
-            'icon': True,
-        }
-    
-    def create_controls(self, on_change_callback) -> ft.Column:
-        return ft.Column([
-            self._create_slider("Width", 'width', 100, 400, on_change_callback),
-            self._create_slider("Height", 'height', 30, 100, on_change_callback),
-            self._create_slider("Elevation", 'elevation', 0, 20, on_change_callback),
-            
-            ft.Text("Background Color:", size=14, weight=ft.FontWeight.BOLD, color="#2d3748"),
-            ft.Dropdown(
-                value=self.params['bgcolor'],
-                options=[
-                    ft.dropdown.Option("#48bb78", "Verde"),
-                    ft.dropdown.Option("#667eea", "Azul"),
-                    ft.dropdown.Option("#f56565", "Rojo"),
-                    ft.dropdown.Option("#ed8936", "Naranja"),
-                ],
-                on_change=lambda e: self._update_param('bgcolor', e.control.value, on_change_callback)
-            ),
-            
-            ft.Divider(height=10),
-            ft.Switch(
-                label="Mostrar Icono",
-                value=self.params['icon'],
-                on_change=lambda e: self._update_param('icon', e.control.value, on_change_callback)
-            ),
-        ], spacing=10, scroll=ft.ScrollMode.AUTO)
-    
+
+    def _style_args(self):
+        p = self.p
+        return dict(
+            bgcolor=p("bgcolor"), color=p("color"), elevation=p("elevation"),
+            shape=ft.RoundedRectangleBorder(radius=p("radius")),
+            padding=ft.Padding.symmetric(horizontal=p("pad_h"), vertical=p("pad_v")),
+        )
+
     def create_preview(self) -> ft.Control:
-        icon_obj = ft.Icons.STAR if self.params['icon'] else None
-        
-        return ft.ElevatedButton(
-            text="Click Me!",
-            width=self.params['width'],
-            height=self.params['height'],
-            icon=icon_obj,
-            style=ft.ButtonStyle(
-                bgcolor=self.params['bgcolor'],
-                color=self.params['color'],
-                elevation=self.params['elevation'],
-            ),
+        p = self.p
+        cls = getattr(ft, p("variant"))
+        return cls(
+            content=p("text"),
+            icon=self.icon_of(p("icon")) if p("show_icon") else None,
+            disabled=p("disabled"),
+            style=ft.ButtonStyle(**self._style_args()),
+            on_click=lambda e: print("¡Click!"),
         )
-    
+
     def generate_code(self) -> str:
-        code_lines = ["ft.ElevatedButton("]
-        code_lines.append("    text='Click Me!',")
-        code_lines.append(f"    width={self.params['width']:.0f},")
-        code_lines.append(f"    height={self.params['height']:.0f},")
-        
-        if self.params['icon']:
-            code_lines.append("    icon=ft.Icons.STAR,")
-        
-        code_lines.append("    style=ft.ButtonStyle(")
-        code_lines.append(f"        bgcolor='{self.params['bgcolor']}',")
-        code_lines.append(f"        color='{self.params['color']}',")
-        code_lines.append(f"        elevation={self.params['elevation']:.0f},")
-        code_lines.append("    ),")
-        code_lines.append(")")
-        
-        return "\n".join(code_lines)
+        p = self.p
+        style = call(
+            "ft.ButtonStyle",
+            ("bgcolor", py(p("bgcolor"))) if p("bgcolor") else None,
+            ("color", py(p("color"))) if p("color") else None,
+            ("elevation", py(p("elevation"))),
+            ("shape", f"ft.RoundedRectangleBorder(radius={py(p('radius'))})"),
+            ("padding", f"ft.Padding.symmetric(horizontal={py(p('pad_h'))}, vertical={py(p('pad_v'))})"),
+        )
+        return call(
+            f"ft.{p('variant')}",
+            ("content", py(p("text"))),
+            ("icon", self.icon_code(p("icon"))) if p("show_icon") else None,
+            ("disabled", "True") if p("disabled") else None,
+            ("style", style),
+            ("on_click", 'lambda e: print("¡Click!")'),
+        )

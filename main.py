@@ -1,23 +1,41 @@
+"""
+Flet Widgets Playground — punto de entrada (Flet 1.0.0).
+
+    flet run --web main.py     # en el navegador
+    flet run main.py           # app de escritorio
+    python main.py             # abre el navegador (igual que la versión original)
+"""
+from pathlib import Path
+
 import flet as ft
-from ui  import MainLayout
-from core   import WidgetManager
+
+import theme
+from core import WidgetManager
+from models import AppState
+from services import prefs_service
+from ui import MainLayout
+
+ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 
 
-def main(page: ft.Page):
-    """Punto de entrada principal de la aplicación"""
-    page.title = "Flet Widgets Playground"
-    page.theme_mode = ft.ThemeMode.LIGHT
+async def main(page: ft.Page):
+    page.title = theme.APP_NAME
     page.padding = 0
-    page.bgcolor = "#f7fafc"
-    page.scroll = ft.ScrollMode.AUTO
-    
-    # Inicializar el gestor de widgets
-    widget_manager = WidgetManager()
-    
-    # Crear y agregar el layout principal
-    main_layout = MainLayout(page, widget_manager)
-    page.add(main_layout.build())
+    page.spacing = 0
+    # Errores de dibujo de Flutter (pantallas grises, etc.) llegan aquí con el mensaje exacto
+    page.on_error = lambda e: print("ERROR CLIENTE:", e.data)
+
+    manager = WidgetManager()
+    state = AppState()
+
+    # Preferencias guardadas: tema, favoritos, último widget, modos de código/vista previa
+    await prefs_service.load_into(state, manager.names())
+    manager.set_current_widget(state.current_widget)
+    theme.apply_theme(page, state.theme_mode)
+
+    layout = MainLayout(page, manager)
+    page.add(layout.build())
 
 
 if __name__ == "__main__":
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER)
+    ft.run(main, assets_dir=str(ASSETS_DIR), view=ft.AppView.WEB_BROWSER)

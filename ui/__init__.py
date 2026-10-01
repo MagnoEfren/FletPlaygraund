@@ -1,7 +1,4 @@
-# ui/__init__.py
-"""
-Módulo UI: Contiene los componentes de interfaz
-"""
+"""Módulo UI: layout responsivo, paneles y componentes."""
 from .layout import MainLayout
 
-__all__ = ['MainLayout']
+__all__ = ["MainLayout"]

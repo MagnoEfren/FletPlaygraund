@@ -1,9 +1,5 @@
-# core/__init__.py
-"""
-Módulo core: Contiene las clases base y gestores centrales
-"""
-from .base_widget import WidgetConfig
+"""Módulo core: clase base de los widgets y gestor central."""
+from .base_widget import CATEGORIES, Param, WidgetConfig
 from .widget_manager import WidgetManager
 
-__all__ = ['WidgetConfig', 'WidgetManager']
-
+__all__ = ["WidgetConfig", "Param", "CATEGORIES", "WidgetManager"]

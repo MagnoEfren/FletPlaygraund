@@ -1,135 +1,61 @@
 import flet as ft
-from core.base_widget import WidgetConfig
+
+from core.base_widget import CROSS_AXIS, MAIN_AXIS, Param, WidgetConfig
+from services.code_service import call, code_list, py
+
+COLORS = ["#667EEA", "#48BB78", "#F56565", "#ED8936", "#0EA5E9", "#EC4899", "#14B8A6", "#EAB308"]
+
+
+def demo_box(i: int, width=None) -> ft.Container:
+    return ft.Container(
+        content=ft.Text(f"Item {i + 1}", color="#FFFFFF", size=14, weight=ft.FontWeight.W_500),
+        bgcolor=COLORS[i % len(COLORS)], padding=14, border_radius=10, width=width,
+    )
 
 
 class RowConfig(WidgetConfig):
-    """Configuración para el widget Row"""
-    
+    PARAMS = [
+        Param("items", "Cantidad de elementos", "slider", 3.0, 1, 8, divisions=7, group="Contenido"),
+        Param("spacing", "Spacing", "slider", 10.0, 0, 50, unit="px", group="Distribución"),
+        Param("alignment", "alignment (eje principal)", "select", "START", options=MAIN_AXIS, group="Distribución"),
+        Param("vertical_alignment", "vertical_alignment", "select", "CENTER", options=CROSS_AXIS[:3],
+              group="Distribución"),
+        Param("wrap", "wrap (salto de línea)", "switch", False, group="Distribución"),
+        Param("scroll", "Scroll horizontal", "switch", False, group="Distribución"),
+    ]
+
     def __init__(self):
         super().__init__(
-            name="Row",
-            icon=ft.Icons.VIEW_WEEK,
-            description="Row organiza widgets horizontalmente en una fila. Permite alinear elementos, "
-                       "controlar espaciado y hacer que los elementos se envuelvan automáticamente."
+            name="Row", icon=ft.Icons.VIEW_WEEK, category="Layout",
+            description="Organiza controles en horizontal. Controla espaciado, alineación en ambos "
+                        "ejes, salto de línea automático (wrap) y scroll.",
         )
-        self.params = {
-            'spacing': 10.0,
-            'alignment': 'start',
-            'vertical_alignment': 'center',
-            'wrap': False,
-        }
-    
-    def create_controls(self, on_change_callback) -> ft.Column:
-        return ft.Column([
-            self._create_slider("Spacing", 'spacing', 0, 50, on_change_callback),
-            
-            ft.Text("Horizontal Alignment:", size=14, weight=ft.FontWeight.BOLD, color="#2d3748"),
-            ft.Dropdown(
-                value=self.params['alignment'],
-                options=[
-                    ft.dropdown.Option("start", "Start"),
-                    ft.dropdown.Option("center", "Center"),
-                    ft.dropdown.Option("end", "End"),
-                    ft.dropdown.Option("space_between", "Space Between"),
-                    ft.dropdown.Option("space_around", "Space Around"),
-                ],
-                on_change=lambda e: self._update_param('alignment', e.control.value, on_change_callback)
-            ),
-            
-            ft.Text("Vertical Alignment:", size=14, weight=ft.FontWeight.BOLD, color="#2d3748"),
-            ft.Dropdown(
-                value=self.params['vertical_alignment'],
-                options=[
-                    ft.dropdown.Option("start", "Start"),
-                    ft.dropdown.Option("center", "Center"),
-                    ft.dropdown.Option("end", "End"),
-                ],
-                on_change=lambda e: self._update_param('vertical_alignment', e.control.value, on_change_callback)
-            ),
-            
-            ft.Divider(height=10),
-            ft.Switch(
-                label="Wrap (Auto ajuste)",
-                value=self.params['wrap'],
-                on_change=lambda e: self._update_param('wrap', e.control.value, on_change_callback)
-            ),
-        ], spacing=10, scroll=ft.ScrollMode.AUTO)
-    
+
     def create_preview(self) -> ft.Control:
-        alignment_map = {
-            'start': ft.MainAxisAlignment.START,
-            'center': ft.MainAxisAlignment.CENTER,
-            'end': ft.MainAxisAlignment.END,
-            'space_between': ft.MainAxisAlignment.SPACE_BETWEEN,
-            'space_around': ft.MainAxisAlignment.SPACE_AROUND,
-        }
-        
-        vertical_map = {
-            'start': ft.CrossAxisAlignment.START,
-            'center': ft.CrossAxisAlignment.CENTER,
-            'end': ft.CrossAxisAlignment.END,
-        }
-        
+        p = self.p
         return ft.Container(
+            width=440, padding=16, border_radius=12,
+            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             content=ft.Row(
-                [
-                    ft.Container(
-                        content=ft.Text("Item 1", color="#ffffff", size=14),
-                        bgcolor="#667eea",
-                        padding=15,
-                        border_radius=10,
-                    ),
-                    ft.Container(
-                        content=ft.Text("Item 2", color="#ffffff", size=14),
-                        bgcolor="#48bb78",
-                        padding=15,
-                        border_radius=10,
-                    ),
-                    ft.Container(
-                        content=ft.Text("Item 3", color="#ffffff", size=14),
-                        bgcolor="#f56565",
-                        padding=15,
-                        border_radius=10,
-                    ),
-                ],
-                spacing=self.params['spacing'],
-                alignment=alignment_map[self.params['alignment']],
-                vertical_alignment=vertical_map[self.params['vertical_alignment']],
-                wrap=self.params['wrap'],
+                [demo_box(i) for i in range(int(p("items")))],
+                spacing=p("spacing"),
+                alignment=getattr(ft.MainAxisAlignment, p("alignment")),
+                vertical_alignment=getattr(ft.CrossAxisAlignment, p("vertical_alignment")),
+                wrap=p("wrap"),
+                run_spacing=p("spacing"),
+                scroll=ft.ScrollMode.AUTO if p("scroll") and not p("wrap") else None,
             ),
-            width=450,
-            padding=20,
-            bgcolor="#f7fafc",
-            border_radius=10,
         )
-    
+
     def generate_code(self) -> str:
-        alignment_code = {
-            'start': 'ft.MainAxisAlignment.START',
-            'center': 'ft.MainAxisAlignment.CENTER',
-            'end': 'ft.MainAxisAlignment.END',
-            'space_between': 'ft.MainAxisAlignment.SPACE_BETWEEN',
-            'space_around': 'ft.MainAxisAlignment.SPACE_AROUND',
-        }
-        
-        vertical_code = {
-            'start': 'ft.CrossAxisAlignment.START',
-            'center': 'ft.CrossAxisAlignment.CENTER',
-            'end': 'ft.CrossAxisAlignment.END',
-        }
-        
-        code_lines = ["ft.Row("]
-        code_lines.append("    [")
-        code_lines.append("        ft.Text('Item 1'),")
-        code_lines.append("        ft.Text('Item 2'),")
-        code_lines.append("        ft.Text('Item 3'),")
-        code_lines.append("    ],")
-        code_lines.append(f"    spacing={self.params['spacing']:.0f},")
-        code_lines.append(f"    alignment={alignment_code[self.params['alignment']]},")
-        code_lines.append(f"    vertical_alignment={vertical_code[self.params['vertical_alignment']]},")
-        
-        if self.params['wrap']:
-            code_lines.append("    wrap=True,")
-        
-        code_lines.append(")")
-        return "\n".join(code_lines)
+        p = self.p
+        items = [f'ft.Text("Item {i + 1}")' for i in range(int(p("items")))]
+        return call(
+            "ft.Row",
+            ("controls", code_list(items)),
+            ("spacing", py(p("spacing"))),
+            ("alignment", f"ft.MainAxisAlignment.{p('alignment')}"),
+            ("vertical_alignment", f"ft.CrossAxisAlignment.{p('vertical_alignment')}"),
+            ("wrap", "True") if p("wrap") else None,
+            ("scroll", "ft.ScrollMode.AUTO") if p("scroll") and not p("wrap") else None,
+        )

@@ -1,119 +1,77 @@
 import flet as ft
-from core.base_widget import WidgetConfig
+
+from core.base_widget import Param, WidgetConfig
+from services.code_service import call, py
+
+ALIGNMENTS = [("CENTER", "Centro"), ("TOP_LEFT", "Arriba izq."), ("TOP_RIGHT", "Arriba der."),
+              ("BOTTOM_LEFT", "Abajo izq."), ("BOTTOM_RIGHT", "Abajo der.")]
 
 
 class ContainerConfig(WidgetConfig):
-    """Configuración para el widget Container"""
-    
+    PARAMS = [
+        Param("width", "Ancho", "slider", 260.0, 50, 500, unit="px", group="Tamaño"),
+        Param("height", "Alto", "slider", 180.0, 50, 400, unit="px", group="Tamaño"),
+        Param("padding", "Padding", "slider", 20.0, 0, 60, unit="px", group="Tamaño"),
+        Param("border_radius", "Radio de borde", "slider", 16.0, 0, 120, unit="px", group="Forma"),
+        Param("alignment", "Alineación del contenido", "select", "CENTER", options=ALIGNMENTS, group="Forma"),
+        Param("bgcolor", "Color de fondo", "color", "#667EEA", group="Color"),
+        Param("gradient", "Degradado", "switch", False, group="Color"),
+        Param("shadow", "Sombra", "switch", True, group="Efectos"),
+        Param("border", "Borde", "switch", False, group="Efectos"),
+        Param("border_width", "Grosor del borde", "slider", 3.0, 1, 12, unit="px", group="Efectos"),
+        Param("border_color", "Color del borde", "color", "#2D3748", group="Efectos"),
+        Param("rotate", "Rotación", "slider", 0.0, -0.8, 0.8, decimals=2, unit=" rad", group="Efectos"),
+    ]
+
     def __init__(self):
         super().__init__(
             name="Container",
             icon=ft.Icons.CROP_SQUARE,
-            description="Un Container es como una caja contenedora. Permite controlar tamaño, espaciado, "
-                       "color de fondo, bordes, sombras y gradientes. Es uno de los widgets más versátiles."
+            category="Layout",
+            description="Caja contenedora versátil: controla tamaño, padding, color, degradados, "
+                        "bordes, sombras, alineación y transformaciones de su contenido.",
         )
-        self.params = {
-            'width': 250.0,
-            'height': 200.0,
-            'padding': 20.0,
-            'margin': 10.0,
-            'border_radius': 15.0,
-            'bgcolor': '#667eea',
-            'shadow': True,
-            'gradient': False,
-            'border': False,
-        }
-    
-    def create_controls(self, on_change_callback) -> ft.Column:
-        return ft.Column([
-            self._create_slider("Width", 'width', 50, 500, on_change_callback),
-            self._create_slider("Height", 'height', 50, 400, on_change_callback),
-            self._create_slider("Padding", 'padding', 0, 50, on_change_callback),
-            self._create_slider("Margin", 'margin', 0, 50, on_change_callback),
-            self._create_slider("Border Radius", 'border_radius', 0, 50, on_change_callback),
-            
-            ft.Divider(height=10),
-            ft.Text("Opciones:", size=14, weight=ft.FontWeight.BOLD, color="#2d3748"),
-            
-            ft.Row([
-                ft.Switch(
-                    label="Shadow",
-                    value=self.params['shadow'],
-                    on_change=lambda e: self._update_param('shadow', e.control.value, on_change_callback)
-                ),
-                ft.Switch(
-                    label="Gradient",
-                    value=self.params['gradient'],
-                    on_change=lambda e: self._update_param('gradient', e.control.value, on_change_callback)
-                ),
-                ft.Switch(
-                    label="Border",
-                    value=self.params['border'],
-                    on_change=lambda e: self._update_param('border', e.control.value, on_change_callback)
-                ),
-            ], wrap=True),
-        ], spacing=10, scroll=ft.ScrollMode.AUTO)
-    
+
     def create_preview(self) -> ft.Control:
-        border_obj = ft.border.all(3, "#2d3748") if self.params['border'] else None
-        
-        shadow_obj = ft.BoxShadow(
-            spread_radius=1,
-            blur_radius=15,
-            color=ft.Colors.with_opacity(0.3, "#000000"),
-            offset=ft.Offset(0, 4),
-        ) if self.params['shadow'] else None
-        
-        gradient_obj = ft.LinearGradient(
-            begin=ft.alignment.top_left,
-            end=ft.alignment.bottom_right,
-            colors=["#667eea", "#764ba2"],
-        ) if self.params['gradient'] else None
-        
+        p = self.p
         return ft.Container(
-            content=ft.Text("¡Hola Flet!", color="#ffffff", size=16, weight=ft.FontWeight.BOLD),
-            width=self.params['width'],
-            height=self.params['height'],
-            padding=self.params['padding'],
-            margin=self.params['margin'],
-            border_radius=self.params['border_radius'],
-            bgcolor=None if self.params['gradient'] else self.params['bgcolor'],
-            alignment=ft.alignment.center,
-            shadow=shadow_obj,
-            gradient=gradient_obj,
-            border=border_obj,
+            content=ft.Text("¡Hola Flet!", color="#FFFFFF", size=16, weight=ft.FontWeight.BOLD),
+            width=p("width"),
+            height=p("height"),
+            padding=p("padding"),
+            border_radius=p("border_radius"),
+            alignment=getattr(ft.Alignment, p("alignment")),
+            bgcolor=None if p("gradient") else p("bgcolor"),
+            gradient=ft.LinearGradient(
+                begin=ft.Alignment.TOP_LEFT, end=ft.Alignment.BOTTOM_RIGHT,
+                colors=[p("bgcolor"), "#764BA2"],
+            ) if p("gradient") else None,
+            shadow=ft.BoxShadow(spread_radius=1, blur_radius=18,
+                                color=ft.Colors.with_opacity(0.3, "#000000"),
+                                offset=ft.Offset(0, 6)) if p("shadow") else None,
+            border=ft.Border.all(p("border_width"), p("border_color")) if p("border") else None,
+            rotate=p("rotate") or None,
         )
-    
+
     def generate_code(self) -> str:
-        code_lines = ["ft.Container("]
-        code_lines.append(f"    content=ft.Text('¡Hola Flet!', color='#ffffff'),")
-        code_lines.append(f"    width={self.params['width']:.0f},")
-        code_lines.append(f"    height={self.params['height']:.0f},")
-        code_lines.append(f"    padding={self.params['padding']:.0f},")
-        code_lines.append(f"    margin={self.params['margin']:.0f},")
-        code_lines.append(f"    border_radius={self.params['border_radius']:.0f},")
-        
-        if self.params['gradient']:
-            code_lines.append("    gradient=ft.LinearGradient(")
-            code_lines.append("        begin=ft.alignment.top_left,")
-            code_lines.append("        end=ft.alignment.bottom_right,")
-            code_lines.append("        colors=['#667eea', '#764ba2'],")
-            code_lines.append("    ),")
-        else:
-            code_lines.append(f"    bgcolor='{self.params['bgcolor']}',")
-        
-        if self.params['shadow']:
-            code_lines.append("    shadow=ft.BoxShadow(")
-            code_lines.append("        spread_radius=1,")
-            code_lines.append("        blur_radius=15,")
-            code_lines.append("        color=ft.Colors.with_opacity(0.3, '#000000'),")
-            code_lines.append("        offset=ft.Offset(0, 4),")
-            code_lines.append("    ),")
-        
-        if self.params['border']:
-            code_lines.append("    border=ft.border.all(3, '#2d3748'),")
-        
-        code_lines.append("    alignment=ft.alignment.center,")
-        code_lines.append(")")
-        
-        return "\n".join(code_lines)
+        p = self.p
+        fill = (("gradient", call("ft.LinearGradient",
+                                  ("begin", "ft.Alignment.TOP_LEFT"),
+                                  ("end", "ft.Alignment.BOTTOM_RIGHT"),
+                                  ("colors", f"[{py(p('bgcolor'))}, \"#764BA2\"]")))
+                if p("gradient") else ("bgcolor", py(p("bgcolor"))))
+        return call(
+            "ft.Container",
+            ("content", 'ft.Text("¡Hola Flet!", color="#FFFFFF", size=16, weight=ft.FontWeight.BOLD)'),
+            ("width", py(p("width"))),
+            ("height", py(p("height"))),
+            ("padding", py(p("padding"))),
+            ("border_radius", py(p("border_radius"))),
+            ("alignment", f"ft.Alignment.{p('alignment')}"),
+            fill,
+            ("shadow", call("ft.BoxShadow", ("spread_radius", "1"), ("blur_radius", "18"),
+                            ("color", 'ft.Colors.with_opacity(0.3, "#000000")'),
+                            ("offset", "ft.Offset(0, 6)"))) if p("shadow") else None,
+            ("border", f"ft.Border.all({py(p('border_width'))}, {py(p('border_color'))})") if p("border") else None,
+            ("rotate", py(p("rotate"))) if p("rotate") else None,
+        )

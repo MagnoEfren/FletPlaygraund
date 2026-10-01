@@ -1,116 +1,168 @@
+"""
+Panel izquierdo: buscador, filtros por categoría, favoritos y lista de widgets.
+"""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import flet as ft
-from core.widget_manager import WidgetManager
-from core.base_widget import WidgetConfig
-from typing import Callable
+
+import theme
+from core.widget_manager import ALL, FAVORITES
+
+if TYPE_CHECKING:
+    from ui.layout import MainLayout
 
 
-class LeftPanel:
-    """Panel izquierdo: Lista de widgets disponibles"""
-    
-    def __init__(self, page: ft.Page, widget_manager: WidgetManager, 
-                 on_widget_change: Callable):
-        self.page = page
-        self.widget_manager = widget_manager
-        self.on_widget_change = on_widget_change
-        
-        # Referencias
-        self.search_field = ft.Ref[ft.TextField]()
-        self.widgets_list_view = ft.Ref[ft.Column]()
-    
-    def search_widgets(self, e):
-        """Filtra widgets según la búsqueda"""
-        query = self.search_field.current.value
-        filtered_widgets = (
-            self.widget_manager.search_widgets(query) 
-            if query 
-            else self.widget_manager.get_all_widgets()
+class LeftPanel(ft.Container):
+    def __init__(self, app: "MainLayout", width=theme.SIDEBAR_W, expand=None):
+        super().__init__(
+            width=width,
+            expand=expand,
+            padding=theme.PAD,
+            bgcolor=theme.PANEL_BG,
+            border_radius=theme.RADIUS,
+            border=ft.Border.all(1, theme.BORDER),
         )
-        
-        self.widgets_list_view.current.controls = [
-            self._create_widget_tile(w) for w in filtered_widgets
-        ]
-        self.page.update()
-    
-    def _create_widget_tile(self, widget_config: WidgetConfig) -> ft.Container:
-        """Crea un tile para un widget"""
+        self.app = app
+        st = app.state
+
+        self.search_tf = ft.TextField(
+            value=st.query,
+            hint_text="Buscar…  Ctrl+K",
+            prefix_icon=ft.Icons.SEARCH,
+            dense=True,
+            filled=True,
+            text_size=14,
+            border=ft.OutlineInputBorder(border_radius=theme.RADIUS_SM,
+                                         side=ft.BorderSide(0, ft.Colors.TRANSPARENT)),
+            on_change=self._on_search,
+        )
+        self.chips_row = ft.Row(spacing=6, scroll=ft.ScrollMode.AUTO)
+        self.count_txt = ft.Text(size=12, color=theme.TEXT_MUTED)
+        self.list_view = ft.ListView(expand=True, spacing=4)
+
+        self.content = ft.Column(
+            expand=True,
+            spacing=10,
+            horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+            controls=[
+                self.search_tf,
+                self.chips_row,
+                self.count_txt,
+                self.list_view,
+            ],
+        )
+        self.refrescar()
+
+    # ------------------------------------------------------------ render
+    def refrescar(self) -> None:
+        self._render_chips()
+        self._render_list()
+
+    def _render_chips(self) -> None:
+        st = self.app.state
+        counts = self.app.manager.count_by_category()
+        chips = []
+        for cat in self.app.manager.categories():
+            if cat == ALL:
+                n = len(self.app.manager.widgets)
+            elif cat == FAVORITES:
+                n = len(st.favorites)
+            else:
+                n = counts.get(cat, 0)
+            chips.append(
+                ft.Chip(
+                    label=f"{cat} · {n}",
+                    leading=ft.Icon(ft.Icons.STAR, size=16) if cat == FAVORITES else None,
+                    selected=st.category == cat,
+                    show_checkmark=False,
+                    data=cat,
+                    on_select=self._on_category,
+                )
+            )
+        self.chips_row.controls = chips
+
+    def _render_list(self) -> None:
+        st = self.app.state
+        items = self.app.manager.filter(st.query, st.category, st.favorites)
+        self.count_txt.value = f"{len(items)} de {len(self.app.manager.widgets)} widgets"
+        if not items:
+            self.list_view.controls = [self._empty_state()]
+            return
+        self.list_view.controls = [self._tile(w) for w in items]
+
+    def _tile(self, w) -> ft.Container:
+        st = self.app.state
+        selected = w.name == st.current_widget
+        fav = w.name in st.favorites
         return ft.Container(
-            content=ft.ListTile(
-                leading=ft.Icon(widget_config.icon, color="#667eea"),
-                title=ft.Text(
-                    widget_config.name, 
-                    size=14, 
-                    weight=ft.FontWeight.W_500
-                ),
-                on_click=lambda _: self.on_widget_change(widget_config),
-            ),
-            border_radius=8,
+            data=w.name,
+            on_click=self._on_pick,
             ink=True,
-        )
-    
-    def build(self) -> ft.Container:
-        """Construye el panel izquierdo"""
-        return ft.Container(
-            content=ft.Column([
-                # Header
-                ft.Row(
-                    controls=[
-                        
-                        ft.Image(
-                                width=48,
-                                height=48, 
-                                src="https://raw.githubusercontent.com/MagnoEfren/FletPlaygraund/refs/heads/main/assets/icon.png",  
-                                fit=ft.ImageFit.COVER,
-                            ),
-                         
-                        ft.ShaderMask(
-                            blend_mode=ft.BlendMode.SRC_IN,
-                            shader=ft.LinearGradient(
-                                colors=["#7edf26", "#0148e2", "#00fbe8"],
-                                begin=ft.alignment.top_left,
-                                end=ft.alignment.bottom_right,
-                            ),
-                            content=ft.Text(
-                                "Flet Widgets\nPlayground",
-                                size=15,
-                                weight=ft.FontWeight.BOLD,
-                                text_align=ft.TextAlign.LEFT,
-                            ),
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.START,
-                    spacing=5,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                ),
-                            
-                # Buscador
-                ft.TextField(
-                    ref=self.search_field,
-                    hint_text="Buscar widget...",
-                    prefix_icon=ft.Icons.SEARCH,
-                    border_radius=10,
-                    filled=True,
-                    on_change=self.search_widgets,
-                ),
-                
-                ft.Divider(height=20),
-                
-                # Lista de widgets
-                ft.Container(
-                    content=ft.Column(
-                        ref=self.widgets_list_view,
+            border_radius=theme.RADIUS_SM,
+            padding=ft.Padding.only(left=12, right=4, top=6, bottom=6),
+            bgcolor=theme.SELECTED_BG if selected else None,
+            content=ft.Row(
+                spacing=12,
+                controls=[
+                    ft.Icon(w.icon, size=20,
+                            color=theme.SELECTED_TEXT if selected else theme.PRIMARY),
+                    ft.Column(
+                        expand=True,
+                        spacing=0,
                         controls=[
-                            self._create_widget_tile(w) 
-                            for w in self.widget_manager.get_all_widgets()
+                            ft.Text(w.name, size=14, weight=ft.FontWeight.W_600,
+                                    color=theme.SELECTED_TEXT if selected else theme.TEXT,
+                                    max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                            ft.Text(w.category, size=11, color=theme.TEXT_MUTED),
                         ],
-                        spacing=5,
-                        scroll=ft.ScrollMode.AUTO,
                     ),
-                    expand=True,
-                ),
-            ], spacing=10),
-            #expand=1,
-            padding=20,
-            border_radius=12,
-            bgcolor="#ffffff",
-            border=ft.border.all(1, "#e2e8f0"),
+                    ft.IconButton(
+                        icon=ft.Icons.STAR if fav else ft.Icons.STAR_BORDER,
+                        icon_color=ft.Colors.AMBER if fav else theme.TEXT_MUTED,
+                        icon_size=18,
+                        tooltip="Quitar de favoritos" if fav else "Agregar a favoritos",
+                        data=w.name,
+                        on_click=self._on_fav,
+                    ),
+                ],
+            ),
         )
+
+    def _empty_state(self) -> ft.Control:
+        st = self.app.state
+        msg = ("Aún no tienes favoritos.\nToca la ☆ de un widget para guardarlo aquí."
+               if st.category == FAVORITES and not st.query else
+               "Ningún widget coincide con tu búsqueda.")
+        return ft.Container(
+            padding=24,
+            content=ft.Column(
+                [ft.Icon(ft.Icons.SEARCH_OFF, size=40, color=theme.TEXT_MUTED),
+                 ft.Text(msg, text_align=ft.TextAlign.CENTER, color=theme.TEXT_MUTED, size=13)],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+        )
+
+    # ------------------------------------------------------------ eventos
+    def _on_search(self, e: ft.Event) -> None:
+        self.app.state.query = e.control.value or ""
+        self._render_list()
+        self.app.safe_update(self)
+
+    def _on_category(self, e: ft.Event) -> None:
+        self.app.state.category = e.control.data
+        self.refrescar()
+        self.app.safe_update(self)
+
+    async def _on_pick(self, e: ft.Event) -> None:
+        await self.app.select_widget(e.control.data)
+
+    async def _on_fav(self, e: ft.Event) -> None:
+        await self.app.toggle_favorite(e.control.data)
+
+    async def focus_search(self) -> None:
+        try:
+            await self.search_tf.focus()
+        except Exception:
+            pass

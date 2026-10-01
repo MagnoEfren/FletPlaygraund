@@ -1,87 +1,97 @@
 import flet as ft
-from core.base_widget import WidgetConfig
+
+from core.base_widget import Param, WidgetConfig
+from services.code_service import call, py
+
+BORDERS = [("outline", "OutlineInputBorder"), ("underline", "UnderlineInputBorder"),
+           ("none", "Sin borde (NoInputBorder)")]
 
 
 class TextFieldConfig(WidgetConfig):
-    """Configuración para el widget TextField"""
-    
+    PARAMS = [
+        Param("label", "Label", "text", "Correo electrónico", group="Textos"),
+        Param("hint_text", "Hint", "text", "tucorreo@ejemplo.com", group="Textos"),
+        Param("helper", "Texto de ayuda (helper)", "text", "No compartiremos tu correo", group="Textos"),
+        Param("width", "Ancho", "slider", 320.0, 150, 520, unit="px", group="Estilo"),
+        Param("border", "Tipo de borde", "select", "outline", options=BORDERS, group="Estilo"),
+        Param("radius", "Radio de borde", "slider", 12.0, 0, 30, unit="px", group="Estilo"),
+        Param("border_color", "Color del borde enfocado", "color", "#667EEA", group="Estilo"),
+        Param("filled", "Relleno (filled)", "switch", False, group="Estilo"),
+        Param("prefix_icon", "Icono prefijo", "switch", True, group="Comportamiento"),
+        Param("password", "Contraseña", "switch", False, group="Comportamiento"),
+        Param("multiline", "Multilínea", "switch", False, group="Comportamiento"),
+        Param("counter", "Contador (max_length=40)", "switch", False, group="Comportamiento"),
+        Param("error", "Mostrar error", "switch", False, group="Comportamiento"),
+    ]
+
     def __init__(self):
         super().__init__(
-            name="TextField",
-            icon=ft.Icons.INPUT,
-            description="TextField es un campo de entrada de texto que permite al usuario escribir información. "
-                       "Puede tener etiquetas, hints, validación y estilos personalizados."
+            name="TextField", icon=ft.Icons.INPUT, category="Entrada",
+            description="Campo de texto con label, hint, ayuda, error, contraseña, multilínea y "
+                        "contador. En Flet 1.0 el borde se define con border=ft.OutlineInputBorder(...).",
         )
-        self.params = {
-            'width': 300.0,
-            'label': 'Nombre de usuario',
-            'border_radius': 10.0,
-            'filled': True,
-            'password': False,
-        }
-    
-    def create_controls(self, on_change_callback) -> ft.Column:
-        return ft.Column([
-            ft.Text(f"Width: {self.params['width']:.0f}px", 
-                   size=13, weight=ft.FontWeight.W_500, color="#2d3748"),
-            ft.Slider(
-                min=150,
-                max=500,
-                value=self.params['width'],
-                on_change=lambda e: self._update_param('width', e.control.value, on_change_callback)
-            ),
-            
-            ft.Text(f"Border Radius: {self.params['border_radius']:.0f}px", 
-                   size=13, weight=ft.FontWeight.W_500, color="#2d3748"),
-            ft.Slider(
-                min=0,
-                max=30,
-                value=self.params['border_radius'],
-                on_change=lambda e: self._update_param('border_radius', e.control.value, on_change_callback)
-            ),
-            
-            ft.Text("Label:", size=14, weight=ft.FontWeight.BOLD, color="#2d3748"),
-            ft.TextField(
-                value=self.params['label'],
-                on_change=lambda e: self._update_param('label', e.control.value, on_change_callback)
-            ),
-            
-            ft.Divider(height=10),
-            ft.Row([
-                ft.Switch(
-                    label="Filled",
-                    value=self.params['filled'],
-                    on_change=lambda e: self._update_param('filled', e.control.value, on_change_callback)
-                ),
-                ft.Switch(
-                    label="Password",
-                    value=self.params['password'],
-                    on_change=lambda e: self._update_param('password', e.control.value, on_change_callback)
-                ),
-            ], wrap=True),
-        ], spacing=10, scroll=ft.ScrollMode.AUTO)
-    
+
+    def _border(self, color, width=1.0):
+        p = self.p
+        kind = p("border")
+        side = ft.BorderSide(width, color)
+        if kind == "underline":
+            return ft.UnderlineInputBorder(side=side)
+        if kind == "none":
+            return ft.NoInputBorder()
+        return ft.OutlineInputBorder(border_radius=p("radius"), side=side)
+
+    def _border_code(self, color_code, width="1"):
+        p = self.p
+        kind = p("border")
+        side = f"ft.BorderSide({width}, {color_code})"
+        if kind == "underline":
+            return f"ft.UnderlineInputBorder(side={side})"
+        if kind == "none":
+            return "ft.NoInputBorder()"
+        return f"ft.OutlineInputBorder(border_radius={py(p('radius'))}, side={side})"
+
     def create_preview(self) -> ft.Control:
+        p = self.p
         return ft.TextField(
-            label=self.params['label'],
-            width=self.params['width'],
-            border_radius=self.params['border_radius'],
-            filled=self.params['filled'],
-            password=self.params['password'],
-            can_reveal_password=self.params['password'],
+            label=p("label"), hint_text=p("hint_text"), helper=p("helper") or None,
+            width=p("width"), filled=p("filled"),
+            prefix_icon=ft.Icons.MAIL_OUTLINE if p("prefix_icon") else None,
+            password=p("password"), can_reveal_password=p("password"),
+            multiline=p("multiline") and not p("password"),
+            min_lines=3 if p("multiline") and not p("password") else None,
+            max_length=40 if p("counter") else None,
+            error="Este campo es obligatorio" if p("error") else None,
+            border={
+                ft.ControlState.DEFAULT: self._border(ft.Colors.OUTLINE),
+                ft.ControlState.FOCUSED: self._border(p("border_color"), 2),
+                ft.ControlState.ERROR: self._border(ft.Colors.ERROR),
+            },
         )
-    
+
     def generate_code(self) -> str:
-        code_lines = ["ft.TextField("]
-        code_lines.append(f"    label='{self.params['label']}',")
-        code_lines.append(f"    width={self.params['width']:.0f},")
-        code_lines.append(f"    border_radius={self.params['border_radius']:.0f},")
-        
-        if self.params['filled']:
-            code_lines.append("    filled=True,")
-        if self.params['password']:
-            code_lines.append("    password=True,")
-            code_lines.append("    can_reveal_password=True,")
-        
-        code_lines.append(")")
-        return "\n".join(code_lines)
+        p = self.p
+        multi = p("multiline") and not p("password")
+        borders = (
+            "{\n"
+            f"    ft.ControlState.DEFAULT: {self._border_code('ft.Colors.OUTLINE')},\n"
+            f"    ft.ControlState.FOCUSED: {self._border_code(py(p('border_color')), '2')},\n"
+            f"    ft.ControlState.ERROR: {self._border_code('ft.Colors.ERROR')},\n"
+            "}"
+        )
+        return call(
+            "ft.TextField",
+            ("label", py(p("label"))),
+            ("hint_text", py(p("hint_text"))),
+            ("helper", py(p("helper"))) if p("helper") else None,
+            ("width", py(p("width"))),
+            ("filled", "True") if p("filled") else None,
+            ("prefix_icon", "ft.Icons.MAIL_OUTLINE") if p("prefix_icon") else None,
+            ("password", "True") if p("password") else None,
+            ("can_reveal_password", "True") if p("password") else None,
+            ("multiline", "True") if multi else None,
+            ("min_lines", "3") if multi else None,
+            ("max_length", "40") if p("counter") else None,
+            ("error", '"Este campo es obligatorio"') if p("error") else None,
+            ("border", borders),
+        )

@@ -1,69 +1,60 @@
 import flet as ft
-from core.base_widget import WidgetConfig
+
+from core.base_widget import Param, WidgetConfig
+from services.code_service import call, code_list, py
+
+VARIANTS = [("ELEVATED", "Elevated"), ("FILLED", "Filled"), ("OUTLINED", "Outlined")]
 
 
 class CardConfig(WidgetConfig):
-    """Configuración para el widget Card"""
-    
+    PARAMS = [
+        Param("variant", "Variante (Material 3)", "select", "ELEVATED", options=VARIANTS, group="Estilo"),
+        Param("elevation", "Elevación", "slider", 4.0, 0, 20, group="Estilo"),
+        Param("radius", "Radio de borde", "slider", 14.0, 0, 40, unit="px", group="Estilo"),
+        Param("bgcolor", "Color de fondo", "color", None, allow_none=True, group="Estilo"),
+        Param("width", "Ancho", "slider", 320.0, 200, 460, unit="px", group="Contenido"),
+        Param("title", "Título", "text", "Título de la tarjeta", group="Contenido"),
+        Param("show_button", "Mostrar botón", "switch", True, group="Contenido"),
+    ]
+
     def __init__(self):
         super().__init__(
-            name="Card",
-            icon=ft.Icons.CREDIT_CARD,
-            description="Card es un contenedor con elevación que crea una superficie Material Design. "
-                       "Es ideal para agrupar información relacionada con un efecto de profundidad."
+            name="Card", icon=ft.Icons.CREDIT_CARD, category="Layout",
+            description="Superficie Material 3 con elevación y esquinas redondeadas. Variantes "
+                        "elevated, filled y outlined para agrupar información relacionada.",
         )
-        self.params = {
-            'elevation': 4.0,
-            'color': '#ffffff',
-        }
-    
-    def create_controls(self, on_change_callback) -> ft.Column:
-        return ft.Column([
-            self._create_slider("Elevation", 'elevation', 0, 20, on_change_callback),
-            
-            ft.Text("Color:", size=14, weight=ft.FontWeight.BOLD, color="#2d3748"),
-            ft.Dropdown(
-                value=self.params['color'],
-                options=[
-                    ft.dropdown.Option("#ffffff", "Blanco"),
-                    ft.dropdown.Option("#f7fafc", "Gris Claro"),
-                    ft.dropdown.Option("#e3f2fd", "Azul Claro"),
-                    ft.dropdown.Option("#f0fff4", "Verde Claro"),
-                ],
-                on_change=lambda e: self._update_param('color', e.control.value, on_change_callback)
-            ),
-        ], spacing=10, scroll=ft.ScrollMode.AUTO)
-    
+
     def create_preview(self) -> ft.Control:
+        p = self.p
+        body = [
+            ft.ListTile(leading=ft.Icon(ft.Icons.ALBUM), title=ft.Text(p("title")),
+                        subtitle=ft.Text("Subtítulo de ejemplo")),
+        ]
+        if p("show_button"):
+            body.append(ft.Row([ft.TextButton("Cancelar"), ft.Button("Aceptar")],
+                               alignment=ft.MainAxisAlignment.END))
         return ft.Card(
-            elevation=self.params['elevation'],
-            color=self.params['color'],
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Text("Card Title", size=18, weight=ft.FontWeight.BOLD, color="#2d3748"),
-                    ft.Text(
-                        "Este es un ejemplo de Card con contenido.\n"
-                        "Puedes agregar cualquier widget dentro.",
-                        size=13,
-                        color="#718096",
-                    ),
-                    ft.ElevatedButton("Acción", bgcolor="#667eea", color="#ffffff"),
-                ], spacing=10),
-                padding=20,
-                width=300,
-            ),
+            variant=getattr(ft.CardVariant, p("variant")),
+            elevation=p("elevation"),
+            bgcolor=p("bgcolor"),
+            shape=ft.RoundedRectangleBorder(radius=p("radius")),
+            content=ft.Container(padding=12, width=p("width"), content=ft.Column(body, spacing=4)),
         )
-    
+
     def generate_code(self) -> str:
-        code_lines = ["ft.Card("]
-        code_lines.append(f"    elevation={self.params['elevation']:.0f},")
-        code_lines.append(f"    color='{self.params['color']}',")
-        code_lines.append("    content=ft.Container(")
-        code_lines.append("        content=ft.Column([")
-        code_lines.append("            ft.Text('Card Title', size=18, weight=ft.FontWeight.BOLD),")
-        code_lines.append("            ft.Text('Contenido de la card'),")
-        code_lines.append("        ]),")
-        code_lines.append("        padding=20,")
-        code_lines.append("    ),")
-        code_lines.append(")")
-        return "\n".join(code_lines)
+        p = self.p
+        body = [call("ft.ListTile", ("leading", "ft.Icon(ft.Icons.ALBUM)"),
+                     ("title", f"ft.Text({py(p('title'))})"),
+                     ("subtitle", 'ft.Text("Subtítulo de ejemplo")'))]
+        if p("show_button"):
+            body.append(call("ft.Row", '[ft.TextButton("Cancelar"), ft.Button("Aceptar")]',
+                             ("alignment", "ft.MainAxisAlignment.END")))
+        return call(
+            "ft.Card",
+            ("variant", f"ft.CardVariant.{p('variant')}"),
+            ("elevation", py(p("elevation"))),
+            ("bgcolor", py(p("bgcolor"))) if p("bgcolor") else None,
+            ("shape", f"ft.RoundedRectangleBorder(radius={py(p('radius'))})"),
+            ("content", call("ft.Container", ("padding", "12"), ("width", py(p("width"))),
+                             ("content", call("ft.Column", code_list(body), ("spacing", "4"))))),
+        )

@@ -1,81 +1,86 @@
+"""
+Panel central: cabecera del widget (info, docs, reset) + parámetros editables.
+"""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import flet as ft
-from core.widget_manager import WidgetManager
-from core.base_widget import WidgetConfig
-from typing import Callable
+
+import theme
+
+if TYPE_CHECKING:
+    from ui.layout import MainLayout
 
 
-class CenterPanel:
-    """Panel central: Información y controles del widget"""
-    
-    def __init__(self, page: ft.Page, widget_manager: WidgetManager, 
-                 update_callback: Callable):
-        self.page = page
-        self.widget_manager = widget_manager
-        self.update_callback = update_callback
-        
-        # Referencias
-        self.widget_info_text = ft.Ref[ft.Text]()
-        self.controls_container = ft.Ref[ft.Container]()
-    
-    def update_widget_info(self, widget_config: WidgetConfig):
-        """Actualiza la información del widget"""
-        self.widget_info_text.current.value = widget_config.description
-        self.controls_container.current.content = widget_config.create_controls(
-            self.update_callback
+class CenterPanel(ft.Container):
+    def __init__(self, app: "MainLayout", width=theme.PARAMS_W, expand=None):
+        super().__init__(
+            width=width,
+            expand=expand,
+            padding=theme.PAD,
+            bgcolor=theme.PANEL_BG,
+            border_radius=theme.RADIUS,
+            border=ft.Border.all(1, theme.BORDER),
         )
-        self.page.update()
-    
-    def build(self) -> ft.Container:
-        """Construye el panel central"""
-        current_widget = self.widget_manager.current_widget
-        
-        return ft.Container(
-            content=ft.Column([
-                # Información del widget
-                ft.Container(
-                    content=ft.Column([
-                        ft.Text(
-                            "ℹ️ Información", 
-                            size=18, 
-                            weight=ft.FontWeight.BOLD, 
-                            color="#2d3748"
-                        ),
-                        ft.Text(
-                            ref=self.widget_info_text,
-                            value=current_widget.description,
-                            size=13,
-                            color="#718096",
-                        ),
-                    ], spacing=10),
-                    padding=20,
-                    bgcolor="#ffffff",
-                    border_radius=12,
-                    border=ft.border.all(1, "#e2e8f0"),
-                ),
-                
-                # Controles de parámetros
-                ft.Container(
-                    content=ft.Column([
-                        ft.Text(
-                            "⚙️ Parámetros", 
-                            size=18, 
-                            weight=ft.FontWeight.BOLD, 
-                            color="#2d3748"
-                        ),
+        self.app = app
+        self.header_box = ft.Container()
+        self.params_view = ft.ListView(expand=True, spacing=theme.GAP, padding=ft.Padding.only(right=6))
+        self.content = ft.Column(
+            expand=True,
+            spacing=theme.GAP,
+            horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+            controls=[self.header_box, self.params_view],
+        )
+        self.refrescar()
+
+    def refrescar(self) -> None:
+        """Reconstruye cabecera y parámetros del widget actual."""
+        w = self.app.manager.current_widget
+        self.header_box.content = ft.Column(
+            spacing=8,
+            controls=[
+                ft.Row(
+                    spacing=12,
+                    controls=[
                         ft.Container(
-                            ref=self.controls_container,
-                            content=current_widget.create_controls(self.update_callback),
-                            expand=True,
+                            width=44, height=44, border_radius=12,
+                            bgcolor=theme.SELECTED_BG, alignment=ft.Alignment.CENTER,
+                            content=ft.Icon(w.icon, color=theme.SELECTED_TEXT),
                         ),
-                    ], spacing=15),
-                    padding=20,
-                    bgcolor="#ffffff",
-                    border_radius=12,
-                    border=ft.border.all(1, "#e2e8f0"),
-                    expand=True,
+                        ft.Column(
+                            expand=True, spacing=0,
+                            controls=[
+                                ft.Text(w.name, size=20, weight=ft.FontWeight.BOLD, color=theme.TEXT,
+                                        max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                                ft.Text(w.category, size=12, color=theme.PRIMARY,
+                                        weight=ft.FontWeight.W_500),
+                            ],
+                        ),
+                    ],
                 ),
-            ], spacing=20, scroll=ft.ScrollMode.AUTO),
-            width=380,
-            padding=20,
-            border=ft.border.only(right=ft.BorderSide(1, "#e2e8f0")),
+                ft.Text(w.description, size=13, color=theme.TEXT_MUTED),
+                ft.Row(
+                    spacing=8,
+                    controls=[
+                        ft.OutlinedButton(
+                            content="Restablecer", icon=ft.Icons.RESTART_ALT,
+                            on_click=self._on_reset,
+                        ),
+                        ft.TextButton(
+                            content="Docs", icon=ft.Icons.MENU_BOOK, tooltip="Abrir la documentación oficial",
+                            # Client Action: abre la URL dentro del gesto (funciona en iOS Safari)
+                            action=ft.OpenUrl(w.docs_url, target=ft.UrlTarget.BLANK),
+                        ),
+                    ],
+                ),
+                ft.Divider(height=1, color=theme.BORDER),
+            ],
         )
+        self.params_view.controls = [
+            ft.Text("Parámetros", size=15, weight=ft.FontWeight.BOLD, color=theme.TEXT),
+            w.create_controls(self.app.on_params_changed),
+        ]
+
+    def _on_reset(self, e: ft.Event) -> None:
+        self.app.reset_current_widget()

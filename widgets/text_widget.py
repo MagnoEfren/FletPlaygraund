@@ -1,108 +1,84 @@
 import flet as ft
-from core.base_widget import WidgetConfig
+
+from core.base_widget import FONT_WEIGHTS, Param, WidgetConfig
+from services.code_service import call, py
+
+ALIGNS = [("LEFT", "Izquierda"), ("CENTER", "Centro"), ("RIGHT", "Derecha"), ("JUSTIFY", "Justificado")]
+DECORATIONS = [("NONE", "Ninguna"), ("UNDERLINE", "Subrayado"), ("LINE_THROUGH", "Tachado"),
+               ("OVERLINE", "Línea superior")]
+OVERFLOWS = [("VISIBLE", "Visible"), ("ELLIPSIS", "Elipsis (…)"), ("FADE", "Fade"), ("CLIP", "Clip")]
 
 
 class TextConfig(WidgetConfig):
-    """Configuración para el widget Text"""
-    
+    PARAMS = [
+        Param("value", "Texto", "text", "Flet hace que crear apps en Python sea rápido y divertido.",
+              group="Contenido"),
+        Param("width", "Ancho máximo", "slider", 320.0, 100, 520, unit="px", group="Contenido"),
+        Param("size", "Tamaño", "slider", 24.0, 10, 64, unit="px", group="Tipografía"),
+        Param("weight", "Peso", "select", "W_500", options=FONT_WEIGHTS, group="Tipografía"),
+        Param("letter_spacing", "Espaciado entre letras", "slider", 0.0, -2, 10, decimals=1,
+              unit="px", group="Tipografía"),
+        Param("color", "Color", "color", None, allow_none=True, group="Tipografía"),
+        Param("text_align", "Alineación", "select", "CENTER", options=ALIGNS, group="Párrafo"),
+        Param("decoration", "Decoración", "select", "NONE", options=DECORATIONS, group="Párrafo"),
+        Param("max_lines", "Máx. líneas (0 = sin límite)", "slider", 0.0, 0, 6, divisions=6, group="Párrafo"),
+        Param("overflow", "Overflow", "select", "ELLIPSIS", options=OVERFLOWS, group="Párrafo"),
+        Param("italic", "Cursiva", "switch", False, group="Párrafo"),
+        Param("selectable", "Seleccionable", "switch", False, group="Párrafo"),
+    ]
+
     def __init__(self):
         super().__init__(
-            name="Text",
-            icon=ft.Icons.TEXT_FIELDS,
-            description="El widget Text muestra texto en pantalla. Permite personalizar tamaño, peso, "
-                       "color, estilo, alineación y más. Es fundamental para mostrar información al usuario."
+            name="Text", icon=ft.Icons.TEXT_FIELDS, category="Texto y media",
+            description="Muestra texto con control total de tipografía: tamaño, peso, color, "
+                        "espaciado, decoración, alineación y límite de líneas.",
         )
-        self.params = {
-            'size': 24.0,
-            'weight': 'normal',
-            'color': '#2d3748',
-            'italic': False,
-            'selectable': False,
-        }
-    
-    def create_controls(self, on_change_callback) -> ft.Column:
-        return ft.Column([
-            ft.Text(f"Size: {self.params['size']:.0f}px", 
-                   size=13, weight=ft.FontWeight.W_500, color="#2d3748"),
-            ft.Slider(
-                min=10,
-                max=60,
-                value=self.params['size'],
-                on_change=lambda e: self._update_param('size', e.control.value, on_change_callback)
-            ),
-            
-            ft.Text("Weight:", size=14, weight=ft.FontWeight.BOLD, color="#2d3748"),
-            ft.Dropdown(
-                value=self.params['weight'],
-                options=[
-                    ft.dropdown.Option("normal", "Normal"),
-                    ft.dropdown.Option("bold", "Bold"),
-                    ft.dropdown.Option("w_300", "Light (300)"),
-                    ft.dropdown.Option("w_500", "Medium (500)"),
-                    ft.dropdown.Option("w_700", "Bold (700)"),
-                ],
-                on_change=lambda e: self._update_param('weight', e.control.value, on_change_callback)
-            ),
-            
-            ft.Text("Color:", size=14, weight=ft.FontWeight.BOLD, color="#2d3748"),
-            ft.Dropdown(
-                value=self.params['color'],
-                options=[
-                    ft.dropdown.Option("#2d3748", "Gris Oscuro"),
-                    ft.dropdown.Option("#667eea", "Azul"),
-                    ft.dropdown.Option("#48bb78", "Verde"),
-                    ft.dropdown.Option("#f56565", "Rojo"),
-                    ft.dropdown.Option("#ed8936", "Naranja"),
-                ],
-                on_change=lambda e: self._update_param('color', e.control.value, on_change_callback)
-            ),
-            
-            ft.Divider(height=10),
-            ft.Row([
-                ft.Switch(
-                    label="Italic",
-                    value=self.params['italic'],
-                    on_change=lambda e: self._update_param('italic', e.control.value, on_change_callback)
-                ),
-                ft.Switch(
-                    label="Selectable",
-                    value=self.params['selectable'],
-                    on_change=lambda e: self._update_param('selectable', e.control.value, on_change_callback)
-                ),
-            ], wrap=True),
-        ], spacing=10, scroll=ft.ScrollMode.AUTO)
-    
+
+    def _style(self):
+        p = self.p
+        deco = None if p("decoration") == "NONE" else getattr(ft.TextDecoration, p("decoration"))
+        if deco is None and not p("letter_spacing"):
+            return None
+        return ft.TextStyle(letter_spacing=p("letter_spacing") or None, decoration=deco)
+
     def create_preview(self) -> ft.Control:
-        weight_map = {
-            'normal': ft.FontWeight.NORMAL,
-            'bold': ft.FontWeight.BOLD,
-            'w_300': ft.FontWeight.W_300,
-            'w_500': ft.FontWeight.W_500,
-            'w_700': ft.FontWeight.W_700,
-        }
-        
+        p = self.p
+        lines = int(p("max_lines"))
         return ft.Text(
-            "Este es un texto de ejemplo",
-            size=self.params['size'],
-            weight=weight_map[self.params['weight']],
-            color=self.params['color'],
-            italic=self.params['italic'],
-            selectable=self.params['selectable'],
+            p("value"),
+            width=p("width"),
+            size=p("size"),
+            weight=getattr(ft.FontWeight, p("weight")),
+            color=p("color"),
+            italic=p("italic"),
+            selectable=p("selectable"),
+            text_align=getattr(ft.TextAlign, p("text_align")),
+            max_lines=lines or None,
+            overflow=getattr(ft.TextOverflow, p("overflow")) if lines else None,
+            style=self._style(),
         )
-    
+
     def generate_code(self) -> str:
-        weight_str = f"ft.FontWeight.{self.params['weight'].upper()}"
-        
-        code_lines = ["ft.Text("]
-        code_lines.append("    'Este es un texto de ejemplo',")
-        code_lines.append(f"    size={self.params['size']:.0f},")
-        code_lines.append(f"    weight={weight_str},")
-        code_lines.append(f"    color='{self.params['color']}',")
-        
-        if self.params['italic']:
-            code_lines.append("    italic=True,")
-        if self.params['selectable']:
-            code_lines.append("    selectable=True,")
-        
-        code_lines.append(")")
-        return "\n".join(code_lines)
+        p = self.p
+        lines = int(p("max_lines"))
+        style = None
+        if self._style() is not None:
+            style = ("style", call(
+                "ft.TextStyle",
+                ("letter_spacing", py(p("letter_spacing"))) if p("letter_spacing") else None,
+                ("decoration", f"ft.TextDecoration.{p('decoration')}") if p("decoration") != "NONE" else None,
+            ))
+        return call(
+            "ft.Text",
+            py(p("value")),
+            ("width", py(p("width"))),
+            ("size", py(p("size"))),
+            ("weight", f"ft.FontWeight.{p('weight')}"),
+            ("color", py(p("color"))) if p("color") else None,
+            ("text_align", f"ft.TextAlign.{p('text_align')}"),
+            ("max_lines", py(lines)) if lines else None,
+            ("overflow", f"ft.TextOverflow.{p('overflow')}") if lines else None,
+            ("italic", "True") if p("italic") else None,
+            ("selectable", "True") if p("selectable") else None,
+            style,
+        )

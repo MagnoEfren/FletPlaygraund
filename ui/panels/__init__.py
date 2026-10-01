@@ -1,10 +1,6 @@
-
-# ui/panels/__init__.py
-"""
-Módulo panels: Contiene los paneles de la interfaz
-"""
-from .left_panel import LeftPanel
+"""Paneles de la interfaz."""
 from .center_panel import CenterPanel
-from .right_panel import RightPanel
+from .left_panel import LeftPanel
+from .right_panel import CodePanel, PreviewPanel
 
-__all__ = ['LeftPanel', 'CenterPanel', 'RightPanel']
+__all__ = ["LeftPanel", "CenterPanel", "PreviewPanel", "CodePanel"]
