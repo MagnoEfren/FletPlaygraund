@@ -64,3 +64,23 @@ class MiWidgetConfig(WidgetConfig):
 2. Añade la clase a `ALL_WIDGETS` en `widgets/__init__.py`. ¡Listo! Los controles se generan solos.
 
 Tipos de `Param`: `slider`, `select`, `switch`, `color`, `text`, `icon`.
+
+## ☁️ Desplegar en Cloudflare Pages
+En **Settings → Builds & deployments** del proyecto:
+
+| Campo | Valor |
+|---|---|
+| Framework preset | None |
+| Build command | `bash build.sh` |
+| Build output directory | `dist` |
+| Variable de entorno | `PYTHON_VERSION` = `3.12` |
+
+`build.sh` usa `flet publish` (web estática con Pyodide), que **no necesita Flutter**.
+No uses `flet build web` en Cloudflare: intenta instalar Flutter y pide confirmación
+(`[y/n]`), y como el build no es interactivo falla con `EOFError`.
+
+Probar el build localmente:
+```bash
+bash build.sh
+python -m http.server 8000 --directory dist   # abre http://localhost:8000
+```
