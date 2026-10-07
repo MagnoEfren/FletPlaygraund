@@ -37,6 +37,8 @@ async def main(page: ft.Page):
     page.add(layout.build())
 
 
+
+
 # Sin "if __name__ == '__main__'": al publicarse como web estática (flet publish,
 # Cloudflare Pages) el archivo se ejecuta dentro de Pyodide y ft.run debe correr siempre.
 ft.run(main, assets_dir=str(ASSETS_DIR), view=ft.AppView.WEB_BROWSER)
