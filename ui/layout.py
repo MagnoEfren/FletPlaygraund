@@ -3,7 +3,7 @@ ui/layout.py — Orquestador de la app.
 
 Layout responsivo con tres modos (se reconstruye SOLO al cruzar un punto de quiebre):
 
-  desktop (>= 1100 px)  │ Widgets │ Parámetros │ Vista previa / Código │
+  desktop (>= 1100 px)  │ Widgets │ Parámetros │ [Vista previa | Código] (pestañas) │
   tablet  (700–1099 px) │ barra inferior: Widgets · Editor (parámetros + vista previa) · Código
   mobile  (< 700 px)    │ barra inferior: Widgets · Editor (vista previa arriba, parámetros abajo) · Código
 """
@@ -34,6 +34,10 @@ class MainLayout:
         self.center_panel: CenterPanel | None = None
         self.preview_panel: PreviewPanel | None = None
         self.code_panel: CodePanel | None = None
+
+        # Pestaña activa del panel derecho en escritorio: "preview" | "code"
+        self.desktop_tab: str = "preview"
+        self.desktop_tabs: ft.SegmentedButton | None = None
 
         self.theme_btn = ft.IconButton(on_click=self._on_toggle_theme)
         self.count_badge = ft.Container(
@@ -104,6 +108,7 @@ class MainLayout:
     def _apply_layout(self, mode: str) -> None:
         self.state.layout_mode = mode
         self.left_panel = self.center_panel = self.preview_panel = self.code_panel = None
+        self.desktop_tabs = None
         compact = mode == "mobile"
 
         # Cabecera compacta en móvil
@@ -117,8 +122,19 @@ class MainLayout:
             self.page.navigation_bar = None
             self.left_panel = LeftPanel(self)
             self.center_panel = CenterPanel(self)
-            self.preview_panel = PreviewPanel(self, expand=1)
-            self.code_panel = CodePanel(self, expand=1)
+            # Vista previa y código ocupan TODO el alto; se alternan con pestañas
+            self.preview_panel = PreviewPanel(self, expand=True)
+            self.code_panel = CodePanel(self, expand=True)
+            self.desktop_tabs = ft.SegmentedButton(
+                segments=[
+                    ft.Segment(value="preview", label="Vista previa", icon=ft.Icons.VISIBILITY),
+                    ft.Segment(value="code", label="Código", icon=ft.Icons.CODE),
+                ],
+                selected=[self.desktop_tab],
+                show_selected_icon=False,
+                on_change=self._on_desktop_tab,
+            )
+            self._sync_desktop_tab()
             self.body.content = ft.Row(
                 expand=True,
                 spacing=theme.GAP,
@@ -126,8 +142,16 @@ class MainLayout:
                 controls=[
                     self.left_panel,
                     self.center_panel,
-                    ft.Column(expand=True, spacing=theme.GAP,
-                              controls=[self.preview_panel, self.code_panel]),
+                    ft.Column(
+                        expand=True,
+                        spacing=10,
+                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                        controls=[
+                            ft.Row([self.desktop_tabs], alignment=ft.MainAxisAlignment.CENTER),
+                            self.preview_panel,
+                            self.code_panel,
+                        ],
+                    ),
                 ],
             )
             return
@@ -167,6 +191,22 @@ class MainLayout:
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
                 controls=[self.preview_panel, self.center_panel],
             )
+
+    # ---------------------------------------------------------------- pestañas escritorio
+    def _sync_desktop_tab(self) -> None:
+        """Muestra solo el panel de la pestaña activa (el otro sigue actualizado, pero oculto)."""
+        if self.preview_panel is not None:
+            self.preview_panel.visible = self.desktop_tab == "preview"
+        if self.code_panel is not None:
+            self.code_panel.visible = self.desktop_tab == "code"
+        if self.desktop_tabs is not None:
+            self.desktop_tabs.selected = [self.desktop_tab]
+
+    def _on_desktop_tab(self, e: ft.Event) -> None:
+        selected = e.control.selected or ["preview"]
+        self.desktop_tab = selected[0]
+        self._sync_desktop_tab()
+        self.page.update()
 
     def _go_tab(self, index: int) -> None:
         self.state.mobile_tab = index
